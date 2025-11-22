@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Card Generator</title>
+    
+    <!-- Tailwind Config for Dark Mode -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gray: {
+                            850: '#1f2937',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Load Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom Scrollbar - Adaptive */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background-color: transparent; }
+        
+        /* Dark Mode Scrollbar */
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #333333; border-radius: 4px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #444444; }
+        
+        /* Light Mode Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+        
+        .hidden-input { display: none; }
+
+        /* Animation Classes */
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        .slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Collapsible Row Animation */
+        .collapsible-row {
+            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out, margin 0.3s ease;
+            max-height: 100px;
+            opacity: 1;
+            overflow: hidden;
+        }
+        .collapsible-row.hidden-row {
+            max-height: 0;
+            opacity: 0;
+            margin: 0;
+        }
+        
+        /* Utility for hidden elements */
+        .hidden-el { display: none !important; }
+    </style>
+</head>
+<body class="bg-white dark:bg-black text-gray-900 dark:text-gray-100 font-sans overflow-hidden transition-colors duration-300">
+
+    <!-- MAIN CONTAINER -->
+    <div class="relative w-full h-screen overflow-hidden">
+
+        <!-- VIEW 1: EDITOR -->
+        <div id="view-editor" class="w-full h-full flex flex-col items-center bg-white dark:bg-black transition-transform duration-300">
+            
+            <!-- Header -->
+            <div class="w-full max-w-2xl px-6 pt-8 pb-4 z-10 bg-white/95 dark:bg-black/95 backdrop-blur border-b border-gray-200 dark:border-gray-800 flex justify-between items-start">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <i data-lucide="edit-3" class="w-6 h-6 text-blue-500"></i>
+                        Profile Editor
+                    </h1>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Customize your details below.</p>
+                </div>
+                
+                <!-- Theme Toggle -->
+                <button id="btn-theme-toggle" type="button" class="p-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    <i id="icon-moon" data-lucide="moon" class="w-5 h-5 hidden dark:block"></i>
+                    <i id="icon-sun" data-lucide="sun" class="w-5 h-5 block dark:hidden"></i>
+                </button>
+            </div>
+
+            <!-- Scrollable Form Area -->
+            <div class="flex-1 w-full max-w-2xl overflow-y-auto p-6 pb-32 custom-scrollbar">
+                <div class="space-y-6">
+                    
+                    <!-- Identity Section -->
+                    <div class="bg-gray-50 dark:bg-gray-900/50 p-5 rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-blue-500/30 transition-colors">
+                        <h2 class="text-xs font-bold text-blue-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <i data-lucide="user" class="w-3 h-3"></i> Identity
+                        </h2>
+                        
+                        <div class="space-y-4">
+                            <!-- Avatar & Badge -->
+                            <div class="flex items-center justify-between gap-4">
+                                <div class="flex items-center gap-4">
+                                    <div class="relative group cursor-pointer">
+                                        <img id="editor-avatar-preview" src="https://pbs.twimg.com/profile_images/1983681414370619392/oTT3nm5Z_400x400.jpg" class="w-16 h-16 rounded-full object-cover border-2 border-gray-300 dark:border-gray-700 group-hover:border-blue-500 transition-colors">
+                                        <div class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <i data-lucide="upload" class="w-4 h-4 text-white"></i>
+                                        </div>
+                                        <input type="file" id="avatar-upload" class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*">
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="text-sm text-gray-600 dark:text-gray-400">Profile Photo</span>
+                                        <span class="text-xs text-gray-400 dark:text-gray-500">Tap to change</span>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-2 bg-white dark:bg-black px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700">
+                                    <input type="checkbox" id="check-verified-badge" checked class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-500 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-900 accent-blue-500 cursor-pointer">
+                                    <label for="check-verified-badge" class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none whitespace-nowrap">Blue Badge</label>
+                                </div>
+                            </div>
+
+                            <!-- Name Inputs -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-500 mb-1.5 ml-1">Display Name</label>
+                                    <input type="text" id="input-name" value="Elon Musk" class="w-full bg-white dark:bg-black border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-2.5 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-500 mb-1.5 ml-1">Handle (no @)</label>
+                                    <div class="relative">
+                                        <span class="absolute left-4 top-2.5 text-gray-500">@</span>
+                                        <input type="text" id="input-handle" value="elonmusk" class="w-full bg-white dark:bg-black border border-gray-300 dark:border-gray-700 rounded-xl pl-8 pr-4 py-2.5 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Details Section -->
+                    <div class="bg-gray-50 dark:bg-gray-900/50 p-5 rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-blue-500/30 transition-colors">
+                        <h2 class="text-xs font-bold text-blue-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <i data-lucide="list" class="w-3 h-3"></i> Details
+                        </h2>
+                        <div class="space-y-5">
+                            
+                            <!-- Row 1: Joined (Text Input + Location) -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-8 relative">
+                                <div class="absolute left-0 top-2.5"><i data-lucide="calendar" class="w-5 h-5 text-gray-400 dark:text-gray-500"></i></div>
+                                <!-- Static Text Label -->
+                                <div class="w-full flex items-center px-1 text-sm text-gray-500 dark:text-gray-400 font-medium h-[42px] col-span-1 sm:col-span-2">
+                                    Date joined
+                                </div>
+                                
+                                <div class="col-span-1 sm:col-span-2 grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Date Text</label>
+                                        <input type="text" id="input-joined-date" value="January 2018" class="w-full bg-white dark:bg-black border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Location</label>
+                                        <div class="relative">
+                                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm pointer-events-none">in</span>
+                                            <input type="text" id="input-joined-location" value="United States" class="w-full bg-white dark:bg-black border border-gray-300 dark:border-gray-700 rounded-lg pl-8 pr-3 py-2 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Row 2: Location (Fixed Label + VPN Toggle) -->
+                            <div class="relative pl-8">
+                                <div class="absolute left-0 top-2.5"><i data-lucide="map-pin" class="w-5 h-5 text-gray-400 dark:text-gray-500"></i></div>
+                                
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <!-- Static Text Label + VPN Toggle -->
+                                    <div class="w-full flex items-center justify-between px-1 h-[42px]">
+                                        <span class="text-sm text-gray-500 dark:text-gray-400 font-medium">Account based in</span>
+                                        <button id="toggle-vpn" type="button" class="text-[10px] uppercase font-bold tracking-wider bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-1 rounded hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 border border-gray-300 dark:border-gray-700">
+                                            <i data-lucide="shield-alert" class="w-3 h-3"></i> VPN
+                                        </button>
+                                    </div>
+                                    <input type="text" id="input-row-1-value" value="United States" class="w-full bg-white dark:bg-black border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none placeholder-gray-400 dark:placeholder-gray-600" placeholder="Value (e.g. France)">
+                                </div>
+                            </div>
+
+                            <!-- Row 3: Verified (Toggleable + Fixed Label) -->
+                            <div class="bg-blue-50 dark:bg-blue-900/10 rounded-xl p-3 border border-blue-100 dark:border-blue-500/20">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center gap-2 text-blue-500 dark:text-blue-400 font-medium text-sm">
+                                        <i data-lucide="badge-check" class="w-4 h-4"></i> Verified Row
+                                    </div>
+                                    <button id="toggle-verified-row" type="button" class="text-xs bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 px-2 py-1 rounded-md hover:bg-blue-200 dark:hover:bg-blue-500/30 transition-colors">
+                                        Show / Hide
+                                    </button>
+                                </div>
+                                <div id="verified-inputs" class="collapsible-row grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <!-- Static Label for Verified -->
+                                    <div class="w-full flex items-center px-1 text-sm text-gray-500 dark:text-gray-400 font-medium h-[42px]">
+                                        Verified
+                                    </div>
+                                    <input type="text" id="input-row-2-value" value="Since August 2023" class="w-full bg-white dark:bg-black border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none">
+                                </div>
+                            </div>
+
+                            <!-- Row 4: Changes (Toggleable + Text Config) -->
+                            <div class="bg-gray-100 dark:bg-gray-800/30 rounded-xl p-3 border border-gray-200 dark:border-gray-700/50">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center gap-2 text-gray-500 dark:text-gray-300 font-medium text-sm">
+                                        <i data-lucide="at-sign" class="w-4 h-4"></i> Username Changes
+                                    </div>
+                                    <button id="toggle-username-row" type="button" class="text-xs bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-1 rounded-md hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors">
+                                        Show / Hide
+                                    </button>
+                                </div>
+                                <div id="username-inputs" class="collapsible-row grid grid-cols-2 gap-3">
+                                    <!-- Count -->
+                                    <div>
+                                        <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Count</label>
+                                        <div class="relative">
+                                            <input type="text" id="input-username-count" value="2" class="w-full bg-white dark:bg-black border border-gray-300 dark:border-gray-700 rounded-lg pl-3 pr-16 py-2 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none">
+                                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs pointer-events-none">changes</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Date Text -->
+                                    <div>
+                                        <label class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Last on</label>
+                                        <input type="text" id="input-username-date" value="October 2022" class="w-full bg-white dark:bg-black border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none">
+                                    </div>
+                                </div>
+                            </div>
+
+                             <!-- Row 5: Connected (Fixed Label) -->
+                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-8 relative">
+                                <div class="absolute left-0 top-2.5"><i data-lucide="globe" class="w-5 h-5 text-gray-400 dark:text-gray-500"></i></div>
+                                <!-- Static Text Label -->
+                                <div class="w-full flex items-center px-1 text-sm text-gray-500 dark:text-gray-400 font-medium h-[42px]">
+                                    Connected via
+                                </div>
+                                <input type="text" id="input-row-4-value" value="United States App Store" class="w-full bg-white dark:bg-black border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none">
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Action Bar -->
+            <div class="absolute bottom-0 w-full p-4 bg-white dark:bg-black border-t border-gray-200 dark:border-gray-800 flex justify-center backdrop-blur-lg bg-opacity-95 z-20 transition-colors">
+                <button id="btn-goto-preview" type="button" class="w-full max-w-sm bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/20 transform transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2">
+                    <i data-lucide="eye" class="w-5 h-5"></i>
+                    Preview & Save
+                </button>
+            </div>
+        </div>
+
+
+        <!-- VIEW 2: FULL SCREEN PREVIEW (Hidden by default) -->
+        <div id="view-preview" class="absolute inset-0 bg-white dark:bg-black z-50 transform translate-x-full transition-transform duration-300 flex flex-col">
+            
+            <!-- Preview Top Bar -->
+            <div class="px-4 py-4 flex items-center justify-between bg-white/50 dark:bg-black/50 backdrop-blur absolute top-0 w-full z-10">
+                <button id="btn-back" type="button" class="text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                    Back to Edit
+                </button>
+            </div>
+
+            <!-- Preview Content Area -->
+            <div class="flex-1 flex flex-col items-center justify-center p-4 overflow-y-auto custom-scrollbar bg-white dark:bg-black transition-colors">
+                
+                <!-- The Card -->
+                <div id="card-preview" class="slide-up w-full max-w-[400px] bg-white dark:bg-black text-gray-900 dark:text-white overflow-hidden p-6 select-none border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl relative transition-colors" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                    
+                    <!-- Header -->
+                    <div class="flex flex-col items-center mb-8">
+                        <div class="w-20 h-20 rounded-full overflow-hidden mb-3 border border-gray-200 dark:border-gray-800 relative">
+                            <img id="preview-avatar" src="https://pbs.twimg.com/profile_images/1983681414370619392/oTT3nm5Z_400x400.jpg" crossorigin="anonymous" alt="Avatar" class="w-full h-full object-cover">
+                        </div>
+                        
+                        <div class="flex items-center gap-1 mb-0.5">
+                            <h1 id="preview-name" class="text-[20px] font-bold leading-tight text-gray-900 dark:text-white">Elon Msuk</h1>
+                            
+                            <!-- Verified Badge (Replaced SVG) -->
+                            <div id="preview-badge-container" class="mt-1 ml-1">
+                                <svg viewBox="0 0 22 22" aria-label="Verified account" role="img" class="w-5 h-5 text-[#1d9bf0] fill-current">
+                                    <g>
+                                        <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z"></path>
+                                    </g>
+                                </svg>
+                            </div>
+                        </div>
+                        
+                        <div class="text-gray-500 text-[15px]">@<span id="preview-handle">elonmusk</span></div>
+                    </div>
+
+                    <!-- Info Rows -->
+                    <div class="space-y-6 text-[15px]">
+                        
+                        <!-- Row 0: Joined (Formatted Date + Location) -->
+                        <div class="flex items-start group">
+                            <div class="mr-4 pt-0.5 text-gray-900 dark:text-white"><i data-lucide="calendar" class="w-6 h-6"></i></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="leading-5 font-bold text-gray-900 dark:text-white mb-0.5">Date joined</div>
+                                <div id="preview-row-0-value" class="leading-5 text-gray-500 dark:text-[#71767b]">January 2018 in United States</div>
+                            </div>
+                        </div>
+
+                        <!-- Row 1: Location (Static Label + VPN Icon) -->
+                        <div class="flex items-start group">
+                            <div class="mr-4 pt-0.5 text-gray-900 dark:text-white"><i data-lucide="map-pin" class="w-6 h-6"></i></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="leading-5 font-bold text-gray-900 dark:text-white mb-0.5">Account based in</div>
+                                <div id="preview-row-1-value" class="leading-5 text-gray-500 dark:text-[#71767b]">United States</div>
+                            </div>
+                            <!-- VPN Icon -->
+                            <div id="preview-vpn-icon" class="ml-2 self-center hidden-el">
+                                <i data-lucide="shield-alert" class="w-5 h-5 text-gray-500 dark:text-[#71767b]"></i>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Verified (Toggleable + Static Label) -->
+                        <div id="preview-row-verified-container" class="collapsible-row flex items-start group">
+                            <div class="mr-4 pt-0.5 text-gray-900 dark:text-white"><i data-lucide="badge-check" class="w-6 h-6"></i></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="leading-5 font-bold text-gray-900 dark:text-white mb-0.5">Verified</div>
+                                <div id="preview-row-2-value" class="leading-5 text-gray-500 dark:text-[#71767b]">Since August 2023</div>
+                            </div>
+                            <div class="ml-2 self-center"><i data-lucide="chevron-right" class="w-5 h-5 text-gray-500 dark:text-[#71767b]"></i></div>
+                        </div>
+
+                        <!-- Row 3: Username (Toggleable) -->
+                        <div id="preview-row-username-container" class="collapsible-row flex items-start group">
+                            <div class="mr-4 pt-0.5 text-gray-900 dark:text-white"><i data-lucide="at-sign" class="w-6 h-6"></i></div>
+                            <div class="flex-1 min-w-0">
+                                <div id="preview-row-3-label" class="leading-5 font-bold text-gray-900 dark:text-white mb-0.5">2 username changes</div>
+                                <div id="preview-row-3-value" class="leading-5 text-gray-500 dark:text-[#71767b]">Last on October 2022</div>
+                            </div>
+                        </div>
+
+                        <!-- Row 4: Connected (Static Label) -->
+                        <div class="flex items-start group">
+                            <div class="mr-4 pt-0.5 text-gray-900 dark:text-white"><i data-lucide="globe" class="w-6 h-6"></i></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="leading-5 font-bold text-gray-900 dark:text-white mb-0.5">Connected via</div>
+                                <div id="preview-row-4-value" class="leading-5 text-gray-500 dark:text-[#71767b]">United States App Store</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                 <div class="mt-8 w-full max-w-[400px]">
+                    <button id="btn-download" type="button" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/30 transform transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2">
+                        <i data-lucide="download" class="w-5 h-5"></i>
+                        Save Image
+                    </button>
+                    <p class="text-center text-gray-500 dark:text-gray-600 text-xs mt-4">
+                        This image is generated locally in your browser.
+                    </p>
+                 </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize Icons
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+
+            // --- STATE & SELECTORS ---
+            let isVerifiedRowVisible = true;
+            let isUsernameRowVisible = true;
+            let isVpnVisible = false;
+            
+            const getEl = (id) => {
+                const el = document.getElementById(id);
+                if (!el) console.error('Missing element:', id);
+                return el;
+            };
+
+            const views = {
+                editor: getEl('view-editor'),
+                preview: getEl('view-preview')
+            };
+
+            const inputs = {
+                name: getEl('input-name'),
+                handle: getEl('input-handle'),
+                verifiedBadge: getEl('check-verified-badge'),
+                avatarUpload: getEl('avatar-upload'),
+                // Row 0: Joined
+                joinedDate: getEl('input-joined-date'),
+                joinedLoc: getEl('input-joined-location'),
+                // Row 1: Location
+                r1v: getEl('input-row-1-value'),
+                // Row 2: Verified
+                r2v: getEl('input-row-2-value'),
+                // Row 3: Changes
+                usernameCount: getEl('input-username-count'),
+                usernameDate: getEl('input-username-date'),
+                // Row 4: Connected
+                r4v: getEl('input-row-4-value'),
+            };
+
+            const previews = {
+                avatarEditor: getEl('editor-avatar-preview'),
+                avatarCard: getEl('preview-avatar'),
+                name: getEl('preview-name'),
+                handle: getEl('preview-handle'),
+                badgeContainer: getEl('preview-badge-container'),
+                vpnIcon: getEl('preview-vpn-icon'),
+                
+                verifiedRow: getEl('preview-row-verified-container'),
+                usernameRow: getEl('preview-row-username-container'),
+                
+                // Rows
+                pr0v: getEl('preview-row-0-value'), 
+                pr1v: getEl('preview-row-1-value'), 
+                pr2v: getEl('preview-row-2-value'),
+                pr3l: getEl('preview-row-3-label'), 
+                pr3v: getEl('preview-row-3-value'),
+                pr4v: getEl('preview-row-4-value'),
+            };
+
+            const buttons = {
+                toggleVerified: getEl('toggle-verified-row'),
+                toggleUsername: getEl('toggle-username-row'),
+                toggleVpn: getEl('toggle-vpn'),
+                toggleTheme: getEl('btn-theme-toggle'),
+                goToPreview: getEl('btn-goto-preview'),
+                backToEdit: getEl('btn-back'),
+                download: getEl('btn-download')
+            };
+
+            // Safety check
+            if (!buttons.goToPreview || !buttons.backToEdit) {
+                console.error("Critical elements missing");
+                return;
+            }
+
+            // --- CORE LOGIC ---
+
+            function updatePreviewData() {
+                try {
+                    // Text
+                    previews.name.textContent = inputs.name.value;
+                    previews.handle.textContent = inputs.handle.value;
+
+                    // Badge
+                    if (inputs.verifiedBadge.checked) {
+                        previews.badgeContainer.style.display = 'block';
+                    } else {
+                        previews.badgeContainer.style.display = 'none';
+                    }
+
+                    // VPN Icon
+                    if (isVpnVisible) {
+                        previews.vpnIcon.classList.remove('hidden-el');
+                    } else {
+                        previews.vpnIcon.classList.add('hidden-el');
+                    }
+
+                    // --- Row 0: Joined (Composite) ---
+                    const dateJoined = inputs.joinedDate.value;
+                    const locJoined = inputs.joinedLoc.value;
+                    previews.pr0v.textContent = `${dateJoined} in ${locJoined}`;
+
+                    // --- Row 1: Location ---
+                    previews.pr1v.textContent = inputs.r1v.value;
+                    
+                    // --- Row 2: Verified ---
+                    previews.pr2v.textContent = inputs.r2v.value;
+                    if (isVerifiedRowVisible) {
+                        previews.verifiedRow.classList.remove('hidden-row');
+                    } else {
+                        previews.verifiedRow.classList.add('hidden-row');
+                    }
+
+                    // --- Row 3: Username Changes (Composite) ---
+                    const count = inputs.usernameCount.value;
+                    previews.pr3l.textContent = `${count} username changes`;
+
+                    const dateChanges = inputs.usernameDate.value;
+                    previews.pr3v.textContent = `Last on ${dateChanges}`;
+
+                    if (isUsernameRowVisible) {
+                        previews.usernameRow.classList.remove('hidden-row');
+                    } else {
+                        previews.usernameRow.classList.add('hidden-row');
+                    }
+
+                    // --- Row 4: Connected ---
+                    previews.pr4v.textContent = inputs.r4v.value;
+                } catch (e) {
+                    console.error("Error updating preview:", e);
+                }
+            }
+
+            // --- EVENT LISTENERS ---
+
+            // 1. Navigation
+            buttons.goToPreview.addEventListener('click', () => {
+                updatePreviewData(); // Ensure fresh data
+                views.preview.classList.remove('translate-x-full');
+                views.editor.classList.add('scale-95', 'opacity-50'); // subtle background effect
+            });
+
+            buttons.backToEdit.addEventListener('click', () => {
+                views.preview.classList.add('translate-x-full');
+                views.editor.classList.remove('scale-95', 'opacity-50');
+            });
+
+            // 2. Avatar
+            inputs.avatarUpload.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        previews.avatarEditor.src = reader.result;
+                        previews.avatarCard.src = reader.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // 3. Verified Row Toggle
+            buttons.toggleVerified.addEventListener('click', (e) => {
+                e.preventDefault();
+                isVerifiedRowVisible = !isVerifiedRowVisible;
+                const container = document.getElementById('verified-inputs');
+                
+                if (isVerifiedRowVisible) {
+                    container.classList.remove('hidden-row');
+                    buttons.toggleVerified.textContent = 'Hide';
+                    buttons.toggleVerified.classList.add('bg-blue-100', 'dark:bg-blue-500/20', 'text-blue-600', 'dark:text-blue-300');
+                    buttons.toggleVerified.classList.remove('bg-gray-200', 'dark:bg-gray-800', 'text-gray-600', 'dark:text-gray-300');
+                } else {
+                    container.classList.add('hidden-row');
+                    buttons.toggleVerified.textContent = 'Show';
+                    buttons.toggleVerified.classList.add('bg-gray-200', 'dark:bg-gray-800', 'text-gray-600', 'dark:text-gray-300');
+                    buttons.toggleVerified.classList.remove('bg-blue-100', 'dark:bg-blue-500/20', 'text-blue-600', 'dark:text-blue-300');
+                }
+            });
+
+            // 4. Username Row Toggle
+            buttons.toggleUsername.addEventListener('click', (e) => {
+                e.preventDefault();
+                isUsernameRowVisible = !isUsernameRowVisible;
+                const container = document.getElementById('username-inputs');
+                
+                if (isUsernameRowVisible) {
+                    container.classList.remove('hidden-row');
+                    buttons.toggleUsername.textContent = 'Hide';
+                    buttons.toggleUsername.classList.add('bg-gray-200', 'dark:bg-gray-800', 'text-gray-600', 'dark:text-gray-300'); 
+                    buttons.toggleUsername.classList.remove('bg-gray-300', 'dark:bg-gray-700', 'text-gray-800', 'dark:text-white');
+                } else {
+                    container.classList.add('hidden-row');
+                    buttons.toggleUsername.textContent = 'Show';
+                    buttons.toggleUsername.classList.add('bg-gray-300', 'dark:bg-gray-700', 'text-gray-800', 'dark:text-white');
+                    buttons.toggleUsername.classList.remove('bg-gray-200', 'dark:bg-gray-800', 'text-gray-600', 'dark:text-gray-300');
+                }
+            });
+
+            // 5. VPN Toggle
+            buttons.toggleVpn.addEventListener('click', (e) => {
+                e.preventDefault();
+                isVpnVisible = !isVpnVisible;
+                
+                if (isVpnVisible) {
+                    buttons.toggleVpn.classList.remove('bg-gray-200', 'dark:bg-gray-800', 'text-gray-500', 'dark:text-gray-400', 'border-gray-300', 'dark:border-gray-700');
+                    buttons.toggleVpn.classList.add('bg-blue-100', 'dark:bg-blue-500/20', 'text-blue-600', 'dark:text-blue-300', 'border-blue-200', 'dark:border-blue-500/50');
+                } else {
+                    buttons.toggleVpn.classList.add('bg-gray-200', 'dark:bg-gray-800', 'text-gray-500', 'dark:text-gray-400', 'border-gray-300', 'dark:border-gray-700');
+                    buttons.toggleVpn.classList.remove('bg-blue-100', 'dark:bg-blue-500/20', 'text-blue-600', 'dark:text-blue-300', 'border-blue-200', 'dark:border-blue-500/50');
+                }
+            });
+
+            // 6. Theme Toggle
+            buttons.toggleTheme.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.documentElement.classList.toggle('dark');
+                
+                // Refresh icons if needed by Lucide
+                // We also rely on CSS display classes, but forcing icon redraw helps some browsers
+                setTimeout(() => {
+                    if (window.lucide) lucide.createIcons();
+                }, 50);
+            });
+
+            // 7. Download
+            buttons.download.addEventListener('click', () => {
+                const card = document.getElementById('card-preview');
+                const btn = buttons.download;
+                const originalHTML = btn.innerHTML;
+                
+                btn.disabled = true;
+                btn.innerHTML = `<span class="animate-pulse">Rendering...</span>`;
+
+                // Detect current theme background color
+                const isDark = document.documentElement.classList.contains('dark');
+                const bgColor = isDark ? '#000000' : '#ffffff';
+
+                setTimeout(() => {
+                    html2canvas(card, {
+                        backgroundColor: bgColor,
+                        scale: 3,
+                        logging: false,
+                        useCORS: true,
+                        allowTaint: true
+                    }).then(canvas => {
+                        canvas.toBlob((blob) => {
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.download = `profile-${inputs.handle.value}.png`;
+                            link.href = url;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            
+                            btn.disabled = false;
+                            btn.innerHTML = originalHTML;
+                            if (window.lucide) lucide.createIcons();
+                        });
+                    }).catch(err => {
+                        console.error(err);
+                        alert("Error generating image.");
+                        btn.disabled = false;
+                        btn.innerHTML = originalHTML;
+                        if (window.lucide) lucide.createIcons();
+                    });
+                }, 100);
+            });
+        });
+    </script>
+</body>
+</html>
